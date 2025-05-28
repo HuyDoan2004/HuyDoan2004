@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>uart_control</name>
+  <version>0.0.0</version>
+  <description>UART control node</description>
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>Apache License 2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>pyserial</exec_depend>
+</package>

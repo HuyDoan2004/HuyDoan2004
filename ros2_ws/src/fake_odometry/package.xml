@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>fake_odometry</name>
+  <version>0.0.0</version>
+  <description>Fake odometry broadcaster for TF</description>
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>Apache License 2.0</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+</package>
