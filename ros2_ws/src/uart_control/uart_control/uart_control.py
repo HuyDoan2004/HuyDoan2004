@@ -56,3 +56,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+    
+#ros2 run slam_toolbox save_map_cli --ros-args -p map_file_name:=/home/username/my_map
