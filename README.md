@@ -10,6 +10,61 @@ Tài liệu này giải thích **bằng tiếng Việt, dễ hiểu** các ý sa
 
 ---
 
+## 0. Cách hiểu nhanh (phiên bản trực quan)
+
+**1. Hai hệ trục khác nhau**
+
+- Camera có:
+  - Gốc (0,0,0) đặt ở tâm camera.
+  - Ba trục X, Y, Z riêng.
+- LiDAR cũng có:
+  - Gốc (0,0,0) đặt ở tâm quay.
+  - Trục X, Y, Z riêng.
+
+Khi camera nói “điểm A ở $(1.8, 0.0, 0.1)$” và LiDAR nói “điểm A ở $(2.0, 0.0, 0.0)$”
+→ 2 con số này **không cùng hệ**, nên **không so sánh trực tiếp được**.
+
+**2. Mục tiêu: ánh xạ L → C**
+
+Ta muốn có một “hàm đổi đơn vị” cố định:
+
+$$
+ p_C = R_{CL} \, p_L + t_{CL}
+$$
+
+Trong đó:
+
+- $(p_L)$: toạ độ điểm trong hệ LiDAR.
+- $(p_C)$: toạ độ **cùng điểm đó** nhưng nhìn từ camera.
+- $(R_{CL})$: quay cho trục LiDAR trùng với trục camera.
+- $(t_{CL})$: tịnh tiến gốc LiDAR về đúng vị trí so với camera.
+
+Nói nôm na: **“Lấy điểm LiDAR đo được, xoay nó cho cùng hướng với camera, rồi dời nó sang vị trí camera.”**
+
+Khi đã có $(R_{CL}, t_{CL})$, bạn có thể:
+
+- Mọi điểm LiDAR → đổi sang hệ camera → so sánh trực tiếp với depth.
+- Hoặc đổi sang `base_link` / `map`… tuỳ ý (ROS lo phần nối các TF với nhau).
+
+**3. Ký hiệu mũ (i) là gì?**
+
+- $p_L^{(1)}$: mốc đo được khi đặt marker ở vị trí thứ **1**.
+- $p_L^{(2)}$: mốc khi marker ở vị trí thứ **2**.
+- ...
+- $p_L^{(N)}$: mốc khi marker ở vị trí thứ **N**.
+
+Tương tự cho $p_C^{(i)}$. Mũ $(i)$ chỉ là **số thứ tự mẫu** (sample index), _không phải_ lũy thừa.
+
+**4. Thuật toán Kabsch làm gì?**
+
+- Nhìn vào rất nhiều cặp $(p_L^{(i)}, p_C^{(i)})$.
+- Tự động tìm ra bộ $(R_{CL}, t_{CL})$ sao cho toàn bộ các điểm LiDAR, sau khi xoay + dời,
+  **nằm gần nhất** với các điểm camera tương ứng.
+
+Phần còn lại bên dưới là chi tiết cách lấy dữ liệu, công thức, và cách đưa kết quả vào URDF.
+
+---
+
 ## 1. Bản chất bài toán: gộp hai hệ trục về một
 
 Robot có 2 cảm biến chính:
@@ -39,6 +94,42 @@ trong đó:
 - $t_{CL} = [t_x, t_y, t_z]^T$ – vector tịnh tiến: vị trí gốc LiDAR so với gốc camera.
 
 Đây là **phép biến đổi cứng 3D (rigid transform)** – chỉ gồm quay + tịnh tiến, không kéo giãn.
+
+**Ma trận quay $3\times 3$ cụ thể là gì?**
+
+Ta có thể viết $R_{CL}$ dưới dạng:
+
+$$
+ R_{CL} =
+ \begin{bmatrix}
+  r_{11} & r_{12} & r_{13} \\
+  r_{21} & r_{22} & r_{23} \\
+  r_{31} & r_{32} & r_{33}
+ \end{bmatrix}.
+$$
+
+Khi nhân $R_{CL}$ với một điểm $p_L = [x_L, y_L, z_L]^T$, ta được một điểm mới $R_{CL} p_L$
+có các toạ độ:
+
+$$
+\begin{aligned}
+ x_C' &= r_{11} x_L + r_{12} y_L + r_{13} z_L, \\
+ y_C' &= r_{21} x_L + r_{22} y_L + r_{23} z_L, \\
+ z_C' &= r_{31} x_L + r_{32} y_L + r_{33} z_L.
+\end{aligned}
+$$
+
+Sau đó cộng thêm tịnh tiến $t_{CL} = [t_x, t_y, t_z]^T$:
+
+$$
+\begin{aligned}
+ x_C &= x_C' + t_x, \\
+ y_C &= y_C' + t_y, \\
+ z_C &= z_C' + t_z.
+\end{aligned}
+$$
+
+Tóm lại: **ma trận $3\times 3$ lo phần “xoay”, vector $[t_x, t_y, t_z]^T$ lo phần “dời”**.
 
 Khoảng cách giữa hai "tâm" cảm biến chính là độ dài của $t_{CL}$:
 
@@ -75,9 +166,9 @@ Với mỗi lần đặt marker thứ $i$:
    - Phát hiện marker trong ảnh màu (OpenCV ArUco).
    - Lấy điểm tâm marker trên ảnh, đọc giá trị depth tương ứng, back‑project ra 3D:
 
-$$
- p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T.
-$$
+     $$
+     p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T.
+     $$
 
    - Ý nghĩa: $x_C^{(i)}, y_C^{(i)}, z_C^{(i)}$ là toạ độ của mốc thứ $i$ trong hệ camera.
 
@@ -86,9 +177,9 @@ $$
    - Dùng thuật toán đơn giản (cluster theo khoảng cách) để lấy cụm điểm tương ứng mặt marker.
    - Lấy trung bình cụm điểm đó → toạ độ mốc trong hệ LiDAR:
 
-$$
- p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T.
-$$
+     $$
+     p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T.
+     $$
 
    - Với LiDAR 2D, toàn bộ điểm nằm trên mặt phẳng quét, ta có thể đặt
      $$z_L^{(i)} = 0.$$
@@ -106,6 +197,16 @@ $$
 
 Nói cách khác: **tìm phép quay + tịnh tiến sao cho hai đám mây điểm (LiDAR và camera)
 chồng khớp lên nhau tốt nhất**.
+
+**Giải thích ký hiệu mũ $(i)$:**
+
+- $p_L^{(1)}$: điểm mốc đo được khi bạn đặt marker ở vị trí thứ **1**.
+- $p_L^{(2)}$: tương tự, khi marker ở vị trí thứ **2**.
+- ...
+- $p_L^{(N)}$: vị trí marker lần thứ **N**.
+
+Tương tự cho $p_C^{(i)}$. Ký hiệu mũ $(i)$ chỉ đơn giản là **số thứ tự mẫu** (sample index),
+không phải lũy thừa.
 
 ---
 
@@ -127,8 +228,8 @@ $$
 Trừ tâm khỏi từng điểm, ta được các điểm mới nằm quanh gốc $(0,0,0)$:
 
 $$
- ilde{p}_L^{(i)} = p_L^{(i)} - \bar{p}_L, \qquad
- ilde{p}_C^{(i)} = p_C^{(i)} - \bar{p}_C.
+ 	ilde{p}_L^{(i)} = p_L^{(i)} - \bar{p}_L, \qquad
+ 	ilde{p}_C^{(i)} = p_C^{(i)} - \bar{p}_C.
 $$
 
 Ý nghĩa trực giác: tạm thời **bỏ qua tịnh tiến**, chỉ quan tâm đến quay.
