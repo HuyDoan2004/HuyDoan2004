@@ -57,16 +57,16 @@ Ta cần **các cặp điểm tương ứng** mà cả hai cảm biến đều �
 
 Với mỗi lần đặt marker thứ $i$:
 
-1. **Camera**:
-   - Phát hiện marker trong ảnh màu (OpenCV ArUco).
+1. **Camera**  
+   - Phát hiện marker trong ảnh màu (OpenCV ArUco).  
    - Lấy điểm tâm marker, dùng depth để back‑project ra 3D trong hệ camera, ký hiệu:
 
      $$
      p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T
      $$
 
-2. **LiDAR**:
-   - Lọc cụm điểm thuộc mặt marker trong quét LiDAR.
+2. **LiDAR**  
+   - Lọc cụm điểm thuộc mặt marker trong quét LiDAR.  
    - Lấy trung bình cụm điểm → toạ độ trong hệ LiDAR:
 
      $$
