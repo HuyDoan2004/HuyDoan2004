@@ -302,3 +302,50 @@ Khi chạy `robot_state_publisher` với URDF này, TF tree của robot sẽ ph�
   2. Tìm phép quay làm chúng khớp tốt nhất (dùng SVD).
   3. Dời lại để tâm đúng vị trí ban đầu → ra tịnh tiến.
 - Phần toán ma trận (SVD) đã gói trong numpy, bạn chỉ cần hiểu ý nghĩa và dùng đúng đầu vào/đầu ra.
+
+---
+
+## 7. Checklist thực hành từng bước
+
+1. **Chuẩn bị phần cứng**
+  - Lắp cố định LiDAR và camera lên robot (không xê dịch trong quá trình đo).
+  - Đặt robot cách tường/phông nền vài mét để có khoảng rộng đặt marker.
+
+2. **Chuẩn bị marker và môi trường**
+  - In 1–2 ArUco marker (hoặc vật mốc rõ ràng) dán trên tấm bìa phẳng.
+  - Đặt marker trong vùng mà **cả camera và LiDAR đều “nhìn thấy” được**.
+  - Thay đổi vị trí marker: gần/xa, trái/phải, cao/thấp, mỗi vị trí chụp vài lần.
+
+3. **Thu thập dữ liệu cho `points_C` (hệ camera)**
+  - Viết (hoặc dùng sẵn) node ROS2 nhận ảnh + depth từ D435i.
+  - Phát hiện ArUco → tính tọa độ 3D tâm marker trong hệ `camera_link`.
+  - Lưu mỗi mẫu thành một điểm `p_C^{(i)} = (x_C^{(i)}, y_C^{(i)}, z_C^{(i)})`.
+
+4. **Thu thập dữ liệu cho `points_L` (hệ LiDAR)**
+  - Từ scan LiDAR, trích cụm điểm tương ứng với marker (tường/plane chứa marker).
+  - Lấy tâm hình học (centroid) cụm này: `p_L^{(i)} = (x_L^{(i)}, y_L^{(i)}, z_L^{(i)})`.
+  - Với LiDAR 2D: đặt luôn `z_L^{(i)} = 0`.
+
+5. **Tạo mảng dữ liệu và chạy hiệu chỉnh**
+  - Gom các điểm đã thu thành hai mảng:
+    - `points_C = [p_C^{(1)}, ..., p_C^{(N)}]`.
+    - `points_L = [p_L^{(1)}, ..., p_L^{(N)}]`.
+  - Dùng Python (vd. file `cam_lidar_calib_example.py`) gọi:
+
+    ```python
+    transform, rmse = kabsch_align(points_L, points_C)
+    ```
+
+  - Kiểm tra `rmse` đủ nhỏ (vài mm–cm).
+
+6. **Ghi kết quả vào URDF/TF**
+  - Ghi `transform.t` vào `origin xyz="tx ty tz"` của joint giữa `camera_link` và `lidar_link`.
+  - Nếu cần quay: tính `roll, pitch, yaw` từ `transform.R` và ghi vào `rpy`.
+
+7. **Kiểm tra lại bằng RViz**
+  - Chạy robot với URDF mới, mở RViz, add:
+    - LiDAR scan.
+    - PointCloud/Depth từ camera.
+  - Di chuyển marker và quan sát: 
+    - Vị trí marker trong hai nguồn dữ liệu phải **trùng nhau (hoặc rất gần)**.
+  - Nếu lệch nhiều: quay lại bước 2–5, thu thêm điểm và hiệu chỉnh lại.
