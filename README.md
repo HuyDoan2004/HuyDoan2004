@@ -62,7 +62,7 @@ Với mỗi lần đặt marker thứ $i$:
    - Lấy điểm tâm marker, dùng depth để back‑project ra 3D trong hệ camera, ký hiệu:
 
 $$
- \p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T
+ p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T
 $$
 
 2. **LiDAR**  
@@ -70,7 +70,7 @@ $$
    - Lấy trung bình cụm điểm → toạ độ trong hệ LiDAR:
 
   $$
-   \p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T
+   p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T
   $$
 
      (với LiDAR 2D có thể lấy $z_L^{(i)} = 0$).
