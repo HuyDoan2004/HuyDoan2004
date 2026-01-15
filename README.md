@@ -73,7 +73,7 @@ $$
    p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T
   $$
 
-     (với LiDAR 2D có thể lấy $z_L^{(i)} = 0$).
+     (với LiDAR 2D có thể lấy $z_L^{(i)} = 0$ ).
 
 Sau khi lặp lại N lần, ta có hai mảng numpy:
 
