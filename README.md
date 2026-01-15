@@ -166,9 +166,9 @@ Với mỗi lần đặt marker thứ $i$:
    - Phát hiện marker trong ảnh màu (OpenCV ArUco).
    - Lấy điểm tâm marker trên ảnh, đọc giá trị depth tương ứng, back‑project ra 3D:
 
-     $$
-     p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T.
-     $$
+$$
+ p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T.
+$$
 
    - Ý nghĩa: $x_C^{(i)}, y_C^{(i)}, z_C^{(i)}$ là toạ độ của mốc thứ $i$ trong hệ camera.
 
@@ -177,12 +177,12 @@ Với mỗi lần đặt marker thứ $i$:
    - Dùng thuật toán đơn giản (cluster theo khoảng cách) để lấy cụm điểm tương ứng mặt marker.
    - Lấy trung bình cụm điểm đó → toạ độ mốc trong hệ LiDAR:
 
-     $$
-     p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T.
-     $$
+$$
+ p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T.
+$$
 
    - Với LiDAR 2D, toàn bộ điểm nằm trên mặt phẳng quét, ta có thể đặt
-     $$z_L^{(i)} = 0.$$
+$$z_L^{(i)} = 0.$$
 
 Sau khi lặp lại $N$ lần (nhiều vị trí marker khác nhau quanh robot), ta có:
 
@@ -242,8 +242,8 @@ $$
 Trừ tâm khỏi từng điểm, ta được các điểm mới nằm quanh gốc $(0,0,0)$:
 
 $$
- 	ilde{p}_L^{(i)} = p_L^{(i)} - \bar{p}_L, \qquad
- 	ilde{p}_C^{(i)} = p_C^{(i)} - \bar{p}_C.
+ ilde{p}_L^{(i)} = p_L^{(i)} - \bar{p}_L, \qquad
+ ilde{p}_C^{(i)} = p_C^{(i)} - \bar{p}_C.
 $$
 
 Ý nghĩa trực giác: tạm thời **bỏ qua tịnh tiến**, chỉ quan tâm đến quay.
