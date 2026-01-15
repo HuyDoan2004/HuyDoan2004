@@ -214,6 +214,20 @@ không phải lũy thừa.
 
 Thuật toán trong file `cam_lidar_calib_example.py` là biến thể Kabsch/Umeyama, gồm 6 bước chính.
 
+**Ghi chú nhanh về ký hiệu (notation)**
+
+- Chỉ số mũ $(i)$: $p_L^{(i)}, p_C^{(i)}$ là **mẫu thứ i** (lần đặt marker thứ i).
+- Chỉ số con:
+  - Chữ **L** (LiDAR): $p_L, p_L^{(i)}, \bar{p}_L, \tilde{p}_L^{(i)}$ đều đang ở **hệ LiDAR**.
+  - Chữ **C** (Camera): $p_C, p_C^{(i)}, \bar{p}_C, \tilde{p}_C^{(i)}$ đều ở **hệ camera**.
+- Dấu gạch ngang trên đầu $\bar{p}$: **giá trị trung bình** (mean) của cả tập điểm.
+- Dấu ngã $\tilde{p}$: điểm đã **dịch về quanh gốc (0,0,0)** sau khi trừ mean.
+- Ký hiệu mũ **T** (ví dụ $(\tilde{p}_C^{(i)})^T$, $V^T$): là **phép chuyển vị (transpose)**:
+  - Biến **vector cột** \([x, y, z]^T\) thành **vector hàng** \([x \; y \; z]\).
+  - Biến ma trận kích thước $3\times 3$ thành ma trận kích thước $3\times 3$ nhưng **đổi hàng thành cột**.
+- $H$: ma trận $3\times 3$ gom thông tin tương quan giữa hai tập điểm.
+- $H = U \, \Sigma \, V^T$: phân rã SVD, với $U, V$ trực chuẩn, $\Sigma$ là ma trận đường chéo.
+
 ### Bước 1 – Tính tâm hai tập điểm
 
 Tâm (mean) của hai tập:
