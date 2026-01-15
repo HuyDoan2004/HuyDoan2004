@@ -10,35 +10,46 @@ Tài liệu này giải thích **bằng tiếng Việt, dễ hiểu** các ý sa
 
 ---
 
-## 1. Vấn đề cần giải: hai hệ trục khác nhau
+## 1. Bản chất bài toán: gộp hai hệ trục về một
 
-Robot có 2 cảm biến:
+Robot có 2 cảm biến chính:
 
-- **Camera RGB‑D D435i** (cho toạ độ 3D trong hệ *camera* – gọi là frame `camera_link`).
-- **LiDAR** (cho toạ độ 2D/3D trong hệ *LiDAR* – frame `lidar_link`).
+- **Camera RGB‑D D435i** – xuất ra toạ độ 3D trong hệ *camera* (frame `camera_link`).
+- **LiDAR** – xuất ra toạ độ 2D/3D trong hệ *LiDAR* (frame `lidar_link`).
 
-Mỗi cảm biến có **hệ trục riêng**. Muốn so sánh dữ liệu (so depth camera với khoảng cách LiDAR, fuse dữ liệu, v.v.) thì phải biết **quan hệ hình học cố định** giữa hai hệ trục này.
+Mỗi cảm biến có **gốc (0,0,0)** và **ba trục X,Y,Z riêng**. Vì vậy cùng một vật A ngoài đời:
 
-Ta mô hình hoá bằng một phép biến đổi tuyến tính:
+- Camera có thể nói: "A ở $(1.8, 0.0, 0.1)$ m".
+- LiDAR có thể nói: "A ở $(2.0, 0.0, 0.0)$ m".
+
+Hai con số này **không so sánh trực tiếp được** vì đo trong **hai hệ trục khác nhau**.
+
+Mục tiêu của hiệu chỉnh ngoại là tìm một phép biến đổi cố định để
+luôn có thể đổi điểm từ hệ LiDAR sang hệ camera (hoặc ngược lại). Ta mô hình hoá bằng:
 
 $$
  p_C = R_{CL} \, p_L + t_{CL}
 $$
 
-Trong đó:
+trong đó:
 
-- $p_L = [x_L, y_L, z_L]^T$: toạ độ điểm đo bởi LiDAR.
-- $p_C = [x_C, y_C, z_C]^T$: toạ độ **cùng điểm đó** trong hệ camera.
-- $R_{CL}$: ma trận quay $3\times 3$ (định hướng LiDAR so với camera).
-- $t_{CL}$: vector tịnh tiến 3D (vị trí gốc LiDAR so với gốc camera).
+- $p_L = [x_L, y_L, z_L]^T$ – toạ độ điểm trong hệ LiDAR (`lidar_link`).
+- $p_C = [x_C, y_C, z_C]^T$ – toạ độ **cùng điểm đó** nhưng trong hệ camera (`camera_link`).
+- $R_{CL}$ – ma trận quay $3\times3$, biến đổi hướng trục LiDAR cho trùng với trục camera.
+- $t_{CL} = [t_x, t_y, t_z]^T$ – vector tịnh tiến: vị trí gốc LiDAR so với gốc camera.
 
-Đây gọi là **phép biến đổi cứng 3D (rigid transform)** – chỉ có quay và tịnh tiến, không co giãn.
+Đây là **phép biến đổi cứng 3D (rigid transform)** – chỉ gồm quay + tịnh tiến, không kéo giãn.
 
-Khoảng cách giữa tâm camera và tâm LiDAR chính là độ dài của $t_{CL}$:
+Khoảng cách giữa hai "tâm" cảm biến chính là độ dài của $t_{CL}$:
 
 $$
- d = \sqrt{t_x^2 + t_y^2 + t_z^2}.
+ d = \|t_{CL}\|_2 = \sqrt{t_x^2 + t_y^2 + t_z^2}.
 $$
+
+Sau khi đã biết $R_{CL}, t_{CL}$, ta có thể:
+
+- Đổi mọi điểm LiDAR về hệ camera → so sánh trực tiếp với depth.
+- Đưa cả hai về một frame khác (ví dụ `base_link`, `map`) thông qua TF chain của ROS.
 
 ---
 
@@ -53,32 +64,39 @@ Ta cần **các cặp điểm tương ứng** mà cả hai cảm biến đều �
   - Camera thấy được marker → trích toạ độ 3D bằng depth.
   - LiDAR quét trúng marker → trích toạ độ điểm/cụm điểm tương ứng.
 
-### 2.2. Tạo hai mảng điểm
+### 2.2. Tạo hai mảng điểm tương ứng
+
+Ta cần nhiều cặp điểm $\bigl(p_L^{(i)}, p_C^{(i)}\bigr)$ sao cho **đó là cùng một mốc ngoài đời**.
 
 Với mỗi lần đặt marker thứ $i$:
 
-1. **Camera**  
-   - Phát hiện marker trong ảnh màu (OpenCV ArUco).  
-   - Lấy điểm tâm marker, dùng depth để back‑project ra 3D trong hệ camera, ký hiệu:
+1. **Từ camera (frame `camera_link`)**
 
-$$
- p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T
-$$
+   - Phát hiện marker trong ảnh màu (OpenCV ArUco).
+   - Lấy điểm tâm marker trên ảnh, đọc giá trị depth tương ứng, back‑project ra 3D:
 
-2. **LiDAR**  
-   - Lọc cụm điểm thuộc mặt marker trong quét LiDAR.  
-   - Lấy trung bình cụm điểm → toạ độ trong hệ LiDAR:
+     $$
+     p_C^{(i)} = [x_C^{(i)}, y_C^{(i)}, z_C^{(i)}]^T.
+     $$
 
-  $$
-   p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T
-  $$
-  
-   (với LiDAR 2D có thể lấy $z_L^{(i)} = 0$).
+   - Ý nghĩa: $x_C^{(i)}, y_C^{(i)}, z_C^{(i)}$ là toạ độ của mốc thứ $i$ trong hệ camera.
 
-Sau khi lặp lại N lần, ta có hai mảng numpy:
+2. **Từ LiDAR (frame `lidar_link`)**
 
-- `points_L`: kích thước `(N, 3)`, chứa các $p_L^{(i)}$.
-- `points_C`: kích thước `(N, 3)`, chứa các $p_C^{(i)}$.
+   - Dùng thuật toán đơn giản (cluster theo khoảng cách) để lấy cụm điểm tương ứng mặt marker.
+   - Lấy trung bình cụm điểm đó → toạ độ mốc trong hệ LiDAR:
+
+     $$
+     p_L^{(i)} = [x_L^{(i)}, y_L^{(i)}, z_L^{(i)}]^T.
+     $$
+
+   - Với LiDAR 2D, toàn bộ điểm nằm trên mặt phẳng quét, ta có thể đặt
+     $$z_L^{(i)} = 0.$$
+
+Sau khi lặp lại $N$ lần (nhiều vị trí marker khác nhau quanh robot), ta có:
+
+- Mảng `points_L` kích thước $(N, 3)$ chứa các $p_L^{(i)}$.
+- Mảng `points_C` kích thước $(N, 3)$ chứa các $p_C^{(i)}$.
 
 Mục tiêu: tìm $R_{CL}, t_{CL}$ sao cho cho mọi $i$:
 
@@ -86,7 +104,8 @@ $$
  p_C^{(i)} \approx R_{CL} \, p_L^{(i)} + t_{CL}.
 $$
 
-Đây là bài toán **"tìm quay + tịnh tiến tốt nhất để khớp hai đám mây điểm"**.
+Nói cách khác: **tìm phép quay + tịnh tiến sao cho hai đám mây điểm (LiDAR và camera)
+chồng khớp lên nhau tốt nhất**.
 
 ---
 
@@ -105,7 +124,7 @@ $$
 
 ### Bước 2 – Dịch điểm về gốc
 
-Trừ tâm khỏi từng điểm, ta được các điểm mới nằm quanh gốc (0,0,0):
+Trừ tâm khỏi từng điểm, ta được các điểm mới nằm quanh gốc $(0,0,0)$:
 
 $$
  	ilde{p}_L^{(i)} = p_L^{(i)} - \bar{p}_L, \qquad
@@ -168,13 +187,15 @@ $$
 
 ### Sai số RMS (để biết hiệu chỉnh tốt hay kém)
 
-Ta có thể tính sai số còn lại:
+Ta có thể tính sai số còn lại cho từng điểm:
 
 $$
  e_i = p_C^{(i)} - (R_{CL} \, p_L^{(i)} + t_{CL})
 $$
 
-và **RMSE**:
+Trong đó $e_i$ là vectơ sai số giữa điểm đo từ camera và điểm LiDAR đã đổi sang hệ camera.
+
+Sai số trung bình bình phương (RMSE):
 
 $$
  	ext{RMSE} = \sqrt{\frac{1}{N} \sum_{i=1}^N \lVert e_i \rVert^2}.
