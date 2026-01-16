@@ -1,6 +1,5 @@
 # Giải thích thuật toán hiệu chỉnh Camera–LiDAR
 
-Tài liệu này giải thích **bằng tiếng Việt, dễ hiểu** các ý sau:
 
 - Vì sao phải hiệu chỉnh ngoại (extrinsic calibration) giữa camera và LiDAR.
 - Mô hình toán học: *rigid transform* (quay + tịnh tiến) giữa hai hệ trục.
@@ -39,7 +38,7 @@ Trong đó:
 - $(R_{CL})$: quay cho trục LiDAR trùng với trục camera.
 - $(t_{CL})$: tịnh tiến gốc LiDAR về đúng vị trí so với camera.
 
-Nói nôm na: **“Lấy điểm LiDAR đo được, xoay nó cho cùng hướng với camera, rồi dời nó sang vị trí camera.”**
+Nghĩa là: **“Lấy điểm LiDAR đo được, xoay nó cho cùng hướng với camera, rồi dời nó sang vị trí camera.”**
 
 Khi đã có $(R_{CL}, t_{CL})$, bạn có thể:
 
